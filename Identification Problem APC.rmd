@@ -1,0 +1,449 @@
+---
+title: "APC Identification Problem: Simuatlion Experiment based on real data of 16 narwhals"
+author: "Lars Nørtoft Reiter"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE,fig.width = 8, fig.height = 6)
+
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+library(dplyr)
+library(tidyr)
+library(mgcv)
+
+df <- read.csv("narwhal_age_year_data.csv")
+df$tusk <- as.factor(df$tusk)
+```
+
+
+### SIMULATION EXPERIMENT 1: Linear DECREASE in environmental concentration
+
+```{r}
+# Make calendar effect (linear)
+calendar_period <- min(df$year):max(df$year)
+sigma = 0.5
+calendar_effect <- 205  - 0.1 * calendar_period  + rnorm(length(calendar_period), sd=sigma)
+
+df_year <- data.frame(year = calendar_period, year_conc = calendar_effect)
+
+# merge
+df$year_conc <- NULL
+df <- merge(df,df_year, by="year")
+
+# plot
+plot(calendar_period, calendar_effect, type="l")
+abline(v=aggregate((df$year), list(df$tusk), min)$x, lty ="dashed", col="red")
+
+# Make individual effect
+df_age <- df %>% select(tusk = tusk, age = age, age_conc = age_conc)
+
+# create individual intrinsic component which interacts with environmental concentraiton
+
+# FIRST CHOICE: Exponential decay
+# age_year_interaction <- function(x, year_conc){
+#   # Exponential individual decay where baseline-factor interacts with yearly concentration in water + slight gamma noise
+#   rnorm(length(year_conc), year_conc, 1)*exp(-rnorm(1,0.1,0.01)*x)+rgamma(length(x), 0.1, 1)
+# }
+
+# SECOND CHOICE: Constant level
+age_year_interaction <- function(x, year_conc){
+  # Constant individual level which interacts with yearly concentration in water
+  year_conc + rgamma(length(year_conc), year_conc, 1)
+}
+
+# # EXAMPLE
+# whale <- "888"
+# tusk_df <- df_age[df_age$tusk==whale,]
+# byIdx <- which(calendar_period %in% df[df$tusk==whale,]$year) # calendar period of whale
+# baseline <- calendar_effect[byIdx]
+# plot(tusk_df$age, age_year_interaction(tusk_df$age, baseline), type="l")
+
+# create age-effect (confounded by year)
+for(tusk in unique(df$tusk)){
+  tusk_df <- df_age[df_age$tusk==tusk,]
+  byIdx <- which(calendar_period %in% df[df$tusk==tusk,]$year) # calendar period of whale
+  baseline <- calendar_effect[byIdx]
+  df[df$tusk==tusk,]$age_conc <- age_year_interaction(tusk_df$age, baseline)
+}
+
+# plot
+ggplot(df, aes(x=age, y=age_conc))+
+  geom_line()+
+  facet_wrap(.~tusk)
+
+# Fit the model for this element
+model <- gamm(age_conc ~ s(age, k=5, bs="cs"), 
+              random = list(tusk = ~1), 
+              data = df)
+
+# Create prediction data
+age_range <- seq(min(df$age, na.rm = TRUE), 
+                 max(df$age, na.rm = TRUE), 
+                 length.out = 100)
+
+pred_data <- data.frame(age = age_range)
+
+# Generate predictions with confidence intervals
+predictions <- predict(model$gam, newdata = pred_data, se.fit = TRUE)
+
+pred_data$fit <- predictions$fit
+pred_data$se <- predictions$se.fit
+pred_data$lower <- pred_data$fit - 1.96 * pred_data$se
+pred_data$upper <- pred_data$fit + 1.96 * pred_data$se
+
+# Create the plot
+ggplot(df, aes(x = age, y = age_conc)) +
+  geom_line(aes(color = tusk), alpha = 0.5) +
+  geom_ribbon(data = pred_data, 
+              aes(x = age, y = fit, ymin = lower, ymax = upper),
+              alpha = 0.3, fill = "blue", inherit.aes = FALSE) +
+  geom_line(data = pred_data, 
+            aes(x = age, y = fit), 
+            color = "blue", size = 1.2, inherit.aes = FALSE) +
+  ylab("Annual concentration") +
+  theme_minimal()
+```
+
+
+
+### SIMULATION EXPERIMENT 2: Linear INCREASE in environmental concentration
+
+
+```{r}
+# Make calendar effect (linear)
+calendar_period <- min(df$year):max(df$year)
+sigma = 0.5
+calendar_effect <- -190  + 0.1 * calendar_period  + rnorm(length(calendar_period), sd=sigma)
+
+df_year <- data.frame(year = calendar_period, year_conc = calendar_effect)
+
+# merge
+df$year_conc <- NULL
+df <- merge(df,df_year, by="year")
+
+# plot
+plot(calendar_period, calendar_effect, type="l")
+abline(v=aggregate((df$year), list(df$tusk), min)$x, lty ="dashed", col="red")
+
+# Make individual effect
+df_age <- df %>% select(tusk = tusk, age = age, age_conc = age_conc)
+
+# create individual intrinsic component which interacts with environmental concentration
+
+# FIRST CHOICE: Exponential decay
+# age_year_interaction <- function(x, year_conc){
+#   # Exponential individual decay where baseline-factor interacts with yearly concentration in water + slight gamma noise
+#   rnorm(length(year_conc), year_conc, 1)*exp(-rnorm(1,0.1,0.01)*x)+rgamma(length(x), 0.1, 1)
+# }
+
+# SECOND CHOICE: Constant level
+age_year_interaction <- function(x, year_conc){
+  # Constant individual level which interacts with yearly concentration in water
+  year_conc + rgamma(length(year_conc), year_conc, 1)
+}
+
+
+# create age-effect (confounded by year)
+for(tusk in unique(df$tusk)){
+  tusk_df <- df_age[df_age$tusk==tusk,]
+  byIdx <- which(calendar_period %in% df[df$tusk==tusk,]$year) # calendar period of whale
+  baseline <- calendar_effect[byIdx]
+  df[df$tusk==tusk,]$age_conc <- age_year_interaction(tusk_df$age, baseline)
+}
+
+# plot
+ggplot(df, aes(x=age, y=age_conc))+
+  geom_line()+
+  facet_wrap(.~tusk)
+
+# Fit the model for this element
+model <- gamm(age_conc ~ s(age, k=5, bs="cs"), 
+              random = list(tusk = ~1), 
+              data = df)
+
+# Create prediction data
+age_range <- seq(min(df$age, na.rm = TRUE), 
+                 max(df$age, na.rm = TRUE), 
+                 length.out = 100)
+
+pred_data <- data.frame(age = age_range)
+
+# Generate predictions with confidence intervals
+predictions <- predict(model$gam, newdata = pred_data, se.fit = TRUE)
+
+pred_data$fit <- predictions$fit
+pred_data$se <- predictions$se.fit
+pred_data$lower <- pred_data$fit - 1.96 * pred_data$se
+pred_data$upper <- pred_data$fit + 1.96 * pred_data$se
+
+# Create the plot
+ggplot(df, aes(x = age, y = age_conc)) +
+  geom_line(aes(color = tusk), alpha = 0.5) +
+  geom_ribbon(data = pred_data, 
+              aes(x = age, y = fit, ymin = lower, ymax = upper),
+              alpha = 0.3, fill = "blue", inherit.aes = FALSE) +
+  geom_line(data = pred_data, 
+            aes(x = age, y = fit), 
+            color = "blue", size = 1.2, inherit.aes = FALSE) +
+  ylab("Annual concentration") +
+  theme_minimal()
+```
+
+
+### SIMULATION EXPERIMENT 3: Linear INCREASE in environmental concentration and exponential decay in individual incorporation
+
+
+```{r}
+# Make calendar effect (linear)
+calendar_period <- min(df$year):max(df$year)
+sigma = 0.2
+calendar_effect <- -190  + 0.1 * calendar_period  + rnorm(length(calendar_period), sd=sigma)
+
+df_year <- data.frame(year = calendar_period, year_conc = calendar_effect)
+
+# merge
+df$year_conc <- NULL
+df <- merge(df,df_year, by="year")
+
+# plot
+plot(calendar_period, calendar_effect, type="l")
+abline(v=aggregate((df$year), list(df$tusk), min)$x, lty ="dashed", col="red")
+
+# Make individual effect
+df_age <- df %>% select(tusk = tusk, age = age, age_conc = age_conc)
+
+# create individual intrinsic component which interacts with environmental concentration
+
+# FIRST CHOICE: Exponential decay
+age_year_interaction <- function(x, year_conc){
+  # Exponential individual decay where baseline-factor interacts with yearly concentration in water + slight gamma noise
+  rnorm(length(year_conc), year_conc, 1)*exp(-rnorm(1,0.05,0.01)*x)+rgamma(length(x), 0.1, 1)
+}
+
+# # SECOND CHOICE: Constant level
+# age_year_interaction <- function(x, year_conc){
+#   # Constant individual level which interacts with yearly concentration in water
+#   year_conc + rgamma(length(year_conc), year_conc, 1)
+# }
+
+# create age-effect (confounded by year)
+for(tusk in unique(df$tusk)){
+  tusk_df <- df_age[df_age$tusk==tusk,]
+  byIdx <- which(calendar_period %in% df[df$tusk==tusk,]$year) # calendar period of whale
+  baseline <- calendar_effect[byIdx]
+  df[df$tusk==tusk,]$age_conc <- age_year_interaction(tusk_df$age, baseline)
+}
+
+# plot
+ggplot(df, aes(x=age, y=age_conc))+
+  geom_line()+
+  facet_wrap(.~tusk)
+
+# Fit the model for this element
+model <- gamm(age_conc ~ s(age, k=5, bs="cs"), 
+              random = list(tusk = ~1), 
+              data = df)
+
+# Create prediction data
+age_range <- seq(min(df$age, na.rm = TRUE), 
+                 max(df$age, na.rm = TRUE), 
+                 length.out = 100)
+
+pred_data <- data.frame(age = age_range)
+
+# Generate predictions with confidence intervals
+predictions <- predict(model$gam, newdata = pred_data, se.fit = TRUE)
+
+pred_data$fit <- predictions$fit
+pred_data$se <- predictions$se.fit
+pred_data$lower <- pred_data$fit - 1.96 * pred_data$se
+pred_data$upper <- pred_data$fit + 1.96 * pred_data$se
+
+# Create the plot
+ggplot(df, aes(x = age, y = age_conc)) +
+  geom_line(aes(color = tusk), alpha = 0.5) +
+  geom_ribbon(data = pred_data, 
+              aes(x = age, y = fit, ymin = lower, ymax = upper),
+              alpha = 0.3, fill = "blue", inherit.aes = FALSE) +
+  geom_line(data = pred_data, 
+            aes(x = age, y = fit), 
+            color = "blue", size = 1.2, inherit.aes = FALSE) +
+  ylab("Annual concentration") +
+  theme_minimal()
+```
+
+
+
+### SIMULATION EXPERIMENT 4: Periodic change in environment concentration
+
+```{r}
+# Make calendar effect (linear)
+calendar_period <- min(df$year):max(df$year)
+sigma = 0.2
+calendar_effect <- 5  + sin(0.5 * calendar_period)  + rnorm(length(calendar_period), sd=sigma)
+
+df_year <- data.frame(year = calendar_period, year_conc = calendar_effect)
+
+# merge
+df$year_conc <- NULL
+df <- merge(df,df_year, by="year")
+
+# plot
+plot(calendar_period, calendar_effect, type="l")
+abline(v=aggregate((df$year), list(df$tusk), min)$x, lty ="dashed", col="red")
+
+# Make individual effect
+df_age <- df %>% select(tusk = tusk, age = age, age_conc = age_conc)
+
+# create individual intrinsic component which interacts with environmental concentration
+
+# FIRST CHOICE: Exponential decay
+# age_year_interaction <- function(x, year_conc){
+#   # Exponential individual decay where baseline-factor interacts with yearly concentration in water + slight gamma noise
+#   rnorm(length(year_conc), year_conc, 1)*exp(-rnorm(1,0.1,0.01)*x)+rgamma(length(x), 0.1, 1)
+# }
+
+# SECOND CHOICE: Constant level
+age_year_interaction <- function(x, year_conc){
+  # Constant individual level which interacts with yearly concentration in water
+  year_conc + rgamma(length(year_conc), year_conc, 1)
+}
+
+
+# create age-effect (confounded by year)
+for(tusk in unique(df$tusk)){
+  tusk_df <- df_age[df_age$tusk==tusk,]
+  byIdx <- which(calendar_period %in% df[df$tusk==tusk,]$year) # calendar period of whale
+  baseline <- calendar_effect[byIdx]
+  df[df$tusk==tusk,]$age_conc <- age_year_interaction(tusk_df$age, baseline)
+}
+
+# plot
+ggplot(df, aes(x=age, y=age_conc))+
+  geom_line()+
+  facet_wrap(.~tusk)
+
+# Fit the model for this element
+model <- gamm(age_conc ~ s(age, k=5, bs="cs"), 
+              random = list(tusk = ~1), 
+              data = df)
+
+# Create prediction data
+age_range <- seq(min(df$age, na.rm = TRUE), 
+                 max(df$age, na.rm = TRUE), 
+                 length.out = 100)
+
+pred_data <- data.frame(age = age_range)
+
+# Generate predictions with confidence intervals
+predictions <- predict(model$gam, newdata = pred_data, se.fit = TRUE)
+
+pred_data$fit <- predictions$fit
+pred_data$se <- predictions$se.fit
+pred_data$lower <- pred_data$fit - 1.96 * pred_data$se
+pred_data$upper <- pred_data$fit + 1.96 * pred_data$se
+
+# Create the plot
+ggplot(df, aes(x = age, y = age_conc)) +
+  geom_line(aes(color = tusk), alpha = 0.5) +
+  geom_ribbon(data = pred_data, 
+              aes(x = age, y = fit, ymin = lower, ymax = upper),
+              alpha = 0.3, fill = "blue", inherit.aes = FALSE) +
+  geom_line(data = pred_data, 
+            aes(x = age, y = fit), 
+            color = "blue", size = 1.2, inherit.aes = FALSE) +
+  ylab("Annual concentration") +
+  theme_minimal()
+```
+
+
+### SIMULATION EXPERIMENT 5: Sudden change in environment concentration
+
+```{r}
+# Make calendar effect (linear)
+calendar_period <- min(df$year):max(df$year)
+sigma = 0.2
+breakpoint <- 2000  # regime shift
+calendar_effect <- 5 + ifelse(calendar_period >= breakpoint, 1, 0) + rnorm(length(calendar_period), sd=sigma)
+
+df_year <- data.frame(year = calendar_period, year_conc = calendar_effect)
+
+# merge
+df$year_conc <- NULL
+df <- merge(df,df_year, by="year")
+
+# plot
+plot(calendar_period, calendar_effect, type="l")
+abline(v=aggregate((df$year), list(df$tusk), min)$x, lty ="dashed", col="red")
+
+# Make individual effect
+df_age <- df %>% select(tusk = tusk, age = age, age_conc = age_conc)
+
+# create individual intrinsic component which interacts with environmental concentration
+
+# FIRST CHOICE: Exponential decay
+# age_year_interaction <- function(x, year_conc){
+#   # Exponential individual decay where baseline-factor interacts with yearly concentration in water + slight gamma noise
+#   rnorm(length(year_conc), year_conc, 1)*exp(-rnorm(1,0.1,0.01)*x)+rgamma(length(x), 0.1, 1)
+# }
+
+# SECOND CHOICE: Constant level
+age_year_interaction <- function(x, year_conc){
+  # Constant individual level which interacts with yearly concentration in water
+  year_conc + rgamma(length(year_conc), year_conc, 1)
+}
+
+# create age-effect (confounded by year)
+for(tusk in unique(df$tusk)){
+  tusk_df <- df_age[df_age$tusk==tusk,]
+  byIdx <- which(calendar_period %in% df[df$tusk==tusk,]$year) # calendar period of whale
+  baseline <- calendar_effect[byIdx]
+  df[df$tusk==tusk,]$age_conc <- age_year_interaction(tusk_df$age, baseline)
+}
+
+# plot
+ggplot(df, aes(x=age, y=age_conc))+
+  geom_line()+
+  facet_wrap(.~tusk)
+
+# Fit the model for this element
+model <- gamm(age_conc ~ s(age, k=5, bs="cs"), 
+              random = list(tusk = ~1), 
+              data = df)
+
+# Create prediction data
+age_range <- seq(min(df$age, na.rm = TRUE), 
+                 max(df$age, na.rm = TRUE), 
+                 length.out = 100)
+
+pred_data <- data.frame(age = age_range)
+
+# Generate predictions with confidence intervals
+predictions <- predict(model$gam, newdata = pred_data, se.fit = TRUE)
+
+pred_data$fit <- predictions$fit
+pred_data$se <- predictions$se.fit
+pred_data$lower <- pred_data$fit - 1.96 * pred_data$se
+pred_data$upper <- pred_data$fit + 1.96 * pred_data$se
+
+# Create the plot
+ggplot(df, aes(x = age, y = age_conc)) +
+  geom_line(aes(color = tusk), alpha = 0.5) +
+  geom_ribbon(data = pred_data, 
+              aes(x = age, y = fit, ymin = lower, ymax = upper),
+              alpha = 0.3, fill = "blue", inherit.aes = FALSE) +
+  geom_line(data = pred_data, 
+            aes(x = age, y = fit), 
+            color = "blue", size = 1.2, inherit.aes = FALSE) +
+  ylab("Annual concentration") +
+  theme_minimal()
+```
