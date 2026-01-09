@@ -1,5 +1,5 @@
 ---
-title: "APC Identification Problem: Simuatlion Experiment based on real data of 16 narwhals"
+title: "APC Identification Problem: Simulation Experiment based on real data of 16 narwhals"
 author: "Lars Nørtoft Reiter"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
@@ -446,4 +446,5 @@ ggplot(df, aes(x = age, y = age_conc)) +
             color = "blue", size = 1.2, inherit.aes = FALSE) +
   ylab("Annual concentration") +
   theme_minimal()
+
 ```
