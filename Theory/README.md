@@ -119,11 +119,7 @@ So what the Lexis diagram shows us is the estimable non-linear part. A hump over
 
 During a journal club at work, I also gave a short talk on the APC identification problem, built using [Quarto](https://quarto.org). 
 
-| File | What it is |
-| --- | --- |
-| [`APC.qmd`](APC.qmd) | Source of the deck. Render with `quarto render APC.qmd`, or preview live with `quarto preview APC.qmd`. |
-| [`APC.html`](APC.html) | The rendered deck. Needs `APC_files/` and `graphics/` alongside it. |
-| [`custom.scss`](custom.scss) | Theme overrides used by the deck. |
+The deck is [`APC.html`](APC.html) and is self-contained (no dependencies). Download it and open it in any browser.
 
 The deck is made up of seven slides:
 
@@ -135,7 +131,7 @@ The deck is made up of seven slides:
 6. Proposed "solutions" without assumptions: the line of solutions itself, and hierarchical APC.
 7. Proposed "solutions" with assumptions: categorical APC, and substituting the real mechanism for one of the three axes.
 
-> **Note on viewing:** GitHub shows `.html` files as source rather than rendering them, you might need to open `APC.html` locally.
+> **Note on viewing:** Equations are typeset by MathJax, which is loaded from a CDN, so keep an internet connection for those.
 
 [^genz]: Born between 1997 and 2012.
 [^mill]: Born between 1981 and 1996.
