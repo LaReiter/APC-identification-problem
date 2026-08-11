@@ -1,4 +1,4 @@
-# Age - Period - Cohort: the identification problem
+# The identification problem in Age-Period-Cohort analysis
 
 In longitudinal studies we typically encounter three temporal variables: **Age** - subjects change over their life course. **Period** - everyone changes at a given moment in calendar time. **Cohort** - subjects born in different years differ from one another. These are related by the identity
 
