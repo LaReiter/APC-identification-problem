@@ -119,7 +119,7 @@ So what the Lexis diagram shows us is the estimable non-linear part. A hump over
 
 During a journal club at work, I also gave a short talk on the APC identification problem, built using [Quarto](https://quarto.org). 
 
-The deck is [`APC.html`](APC.html) and is self-contained (no dependencies). Download it and open it in any browser.
+The deck is [`APC-slides.html`](APC-slides.html) and is self-contained (no dependencies). Download it and open it in any browser.
 
 The deck is made up of seven slides:
 
