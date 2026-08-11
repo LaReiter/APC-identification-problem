@@ -131,7 +131,7 @@ The deck is made up of seven slides:
 6. Proposed "solutions" without assumptions: the line of solutions itself, and hierarchical APC.
 7. Proposed "solutions" with assumptions: categorical APC, and substituting the real mechanism for one of the three axes.
 
-> **Note on viewing:** Equations are typeset by MathJax, which is loaded from a CDN, so keep an internet connection for those.
+> **Note on viewing:** The .html file likely needs to be downloaded and opened locally due to size.
 
 [^genz]: Born between 1997 and 2012.
 [^mill]: Born between 1981 and 1996.
