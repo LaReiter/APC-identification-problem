@@ -1,4 +1,4 @@
-# Age-Period-Cohort-Identification-Problem---A-visualization
+# Age-Period-Cohort identification problem: a visualization based on synthetic signals in narwhal tusks
 
 We simulate a climatic signal under different conditions, and different incorporation mechanisms for individual narwhals, and show how the component of age and year becomes unidentifiable.
 
